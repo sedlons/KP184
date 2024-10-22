@@ -255,14 +255,15 @@ private:
     rc = (int)doIO(sbuf, slen, rbuf, sizeof(rbuf));
     if (rc < 0)
       return rc;
-    if (rc != 7)
+    if (rc < 6)
       return -ENODATA;
     if (rbuf[0] != getAddress())
       return -EFAULT;
     if (rbuf[1] != OP_WRITE1AO)
       return -ENOMSG;
-    if (memcmp(rbuf + 2, sbuf + 2, 4) != 0) // addr + code + reg[2] + val[2]
+    if (memcmp(rbuf + rc - 2, sbuf + slen -2, 2) != 0) { // check only part of rec value. newer fw return shorter answers (6B) ? 
       return -ENODATA;
+  }
 
     return 0;
   }
