@@ -43,7 +43,7 @@ public:
     m_fd(-1)
   , m_type(NONE)
   , m_timeout_send({ 2, 0 })
-  , m_timeout_recv({ 0, 50000L }) {
+  , m_timeout_recv({ 0, 1500000L }) {
   }
 
   ~Link() {
@@ -493,6 +493,9 @@ serfail:
 
         if(rc > 0) {
           rlen += rc;
+          // after first rec data, next select timeout can be shorter
+          timeout.tv_sec = 0;
+          timeout.tv_usec = 50000L;
 		}
 
         if (rc < 0) {
