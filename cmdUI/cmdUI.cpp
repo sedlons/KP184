@@ -231,7 +231,8 @@ static int process_command(int fd, char *line, int len)
 
 void usage(const char *prog)
 {
-  printf("usage: %s <-t tty|-s host[:port]> [-B conf] [\"cmd 1\"] ...\n", prog);
+  printf("usage: %s <-t tty|-s host[:port]> [-o] [-B conf] [\"cmd 1\"] ...\n", prog);
+  printf(" -o: older KP184 firmware before 2020\n");
   printf(" -t: communicate via TTY port\n");
   printf(" -s: communicate via socket\n");
   printf(" -B: serial configuration string [%s]\n", getDefaultConfig(Link::SERIAL));
@@ -247,10 +248,12 @@ int main(int argc, char *argv[])
   Link::linktype_t ltype = Link::SERIAL;
   const char *link = NULL, *lconf = NULL, *prog = basename(argv[0]);
   char c;
+  bool isOldFirmware = false;
 
   opterr = 0;
-  while ((c = getopt(argc, argv, "t:s:B:")) != -1) {
+  while ((c = getopt(argc, argv, "ot:s:B:")) != -1) {
     switch(c) {
+    case 'o': isOldFirmware = true; break;
     case 't': ltype = Link::SERIAL; link = optarg; break;
     case 's': ltype = Link::SOCKET; link = optarg; break;
     case 'B': lconf = optarg; break;
@@ -275,7 +278,7 @@ int main(int argc, char *argv[])
   sigaction(SIGINT, &_sigact, NULL);
   sigaction(SIGQUIT, &_sigact, NULL);
 
-  if (openDevice(ltype, link, lconf))
+  if (openDevice(ltype, link, lconf, isOldFirmware))
     return -ENOTCONN;
 
 #ifdef HAVE_READLINE

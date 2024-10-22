@@ -21,7 +21,7 @@ template <size_t max_msglen_val = 260,
 class mbRTU : public Link {
 public:
   mbRTU():  m_devaddr(def_devaddr)
-          , m_recvdelay(10000)
+          , crcLSBfirst(false)
 #ifdef MBDEBUG
           , m_debug(false)
 #endif
@@ -39,7 +39,9 @@ public:
 
   virtual devaddr_t getAddress() { return m_devaddr; }
 
-  virtual void setRecvDelay(useconds_t delay) { m_recvdelay = delay; }
+  virtual void setCRCLSBfirst(bool on) { crcLSBfirst = on; }
+
+  virtual bool getCRCLSBfirst() { return crcLSBfirst; }
 
 #ifdef MBDEBUG
   virtual void setDebug(bool on) { m_debug = on; }
@@ -134,8 +136,12 @@ public:
 
   // len is length of payload in the frame (excl. CRC)
   // returns total frame length (inc. CRC)
-  static size_t addCRC(uint8_t buf[], size_t len) {
+  virtual size_t addCRC(uint8_t buf[], size_t len) {
     uint16_t crc = CRC16(buf, len);
+    
+    if(crcLSBfirst)
+      crc = ((crc << 8) & 0xff00) | ((crc >> 8) & 0x00ff);
+    
     buf[len++] = (uint8_t)((crc >> 8) & 0xFF);
     buf[len++] = (uint8_t)(crc & 0xFF);
     return len;
@@ -143,12 +149,16 @@ public:
 
   // len is full length of the frame (inc. CRC)
   // returns payload length on match (excl. CRC), -1 if no match
-  static ssize_t checkCRC(const uint8_t buf[], size_t len) {
+  virtual ssize_t checkCRC(const uint8_t buf[], size_t len) {
     if (len <= 2)
       return -ENODATA;
 
     len -= 2;
     uint16_t crc = CRC16(buf, len);
+
+    if(crcLSBfirst)
+      crc = ((crc << 8) & 0xff00) | ((crc >> 8) & 0x00ff);
+
     if (buf[len] == (uint8_t)((crc >> 8) & 0xFF) &&
         buf[len + 1] == (uint8_t)(crc & 0xFF))
       return len;
@@ -215,7 +225,7 @@ protected:
 
 private:
   devaddr_t m_devaddr;
-  useconds_t m_recvdelay;
+  bool crcLSBfirst; //  CRC LSB first - New 2020 FW and above
 #ifdef MBDEBUG
   bool m_debug;
 #endif

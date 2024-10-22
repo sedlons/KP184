@@ -43,7 +43,7 @@ public:
     m_fd(-1)
   , m_type(NONE)
   , m_timeout_send({ 2, 0 })
-  , m_timeout_recv({ 0, 500000L }) {
+  , m_timeout_recv({ 0, 50000L }) {
   }
 
   ~Link() {

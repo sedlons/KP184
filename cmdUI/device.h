@@ -12,7 +12,7 @@ typedef struct _cmd_t {
 extern cmd_t devcmds[];
 
 // misc
-int openDevice(Link::linktype_t type, const char link[], const char config[]);
+int openDevice(Link::linktype_t type, const char link[], const char config[], bool isOldFW);
 int reOpenDevice();
 const char *getDefaultConfig(Link::linktype_t type);
 const char *getPrompt();

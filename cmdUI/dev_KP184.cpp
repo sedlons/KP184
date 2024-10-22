@@ -356,8 +356,9 @@ cmd_t devcmds[] = {
   CMD_END
 };
 
-int openDevice(Link::linktype_t type, const char *link, const char *config)
+int openDevice(Link::linktype_t type, const char *link, const char *config, bool isOldFW)
 {
+  kp184.setCRCLSBfirst(!isOldFW); // new 2020 FW and above have swapped CRC
   return kp184.open(type, link, config);
 }
 
