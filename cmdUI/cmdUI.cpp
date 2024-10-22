@@ -232,7 +232,7 @@ static int process_command(int fd, char *line, int len)
 void usage(const char *prog)
 {
   printf("usage: %s <-t tty|-s host[:port]> [-o] [-B conf] [\"cmd 1\"] ...\n", prog);
-  printf(" -o: older KP184 firmware before 2020\n");
+  printf(" -O: older KP184 firmware before 2020\n");
   printf(" -t: communicate via TTY port\n");
   printf(" -s: communicate via socket\n");
   printf(" -B: serial configuration string [%s]\n", getDefaultConfig(Link::SERIAL));
@@ -251,9 +251,9 @@ int main(int argc, char *argv[])
   bool isOldFirmware = false;
 
   opterr = 0;
-  while ((c = getopt(argc, argv, "ot:s:B:")) != -1) {
+  while ((c = getopt(argc, argv, "Ot:s:B:")) != -1) {
     switch(c) {
-    case 'o': isOldFirmware = true; break;
+    case 'O': isOldFirmware = true; break;
     case 't': ltype = Link::SERIAL; link = optarg; break;
     case 's': ltype = Link::SOCKET; link = optarg; break;
     case 'B': lconf = optarg; break;

@@ -167,7 +167,8 @@ void usage(const char prog[])
 {
   printf("usage: %s <-t tty|-s host[:port]> <-l load> <-v Volt> [-B conf] [-a addr]"
          " [-V Volt] [-c Amp] [-C Amp] [-i interval] [-N samples] [-n samples]"
-         " [-f path] [-o] [-q]\n", prog);
+         " [-f path] [-o]  [-O] [-q]\n", prog);
+  printf(" -O: older KP184 firmware before 2020\n");
   printf(" -t: communicate via TTY port\n");
   printf(" -s: communicate via socket\n");
   printf(" -B: serial configuration string [%s]\n", defconf_serial);
@@ -208,10 +209,13 @@ int main(int argc, char *argv[])
   static struct sigaction sigact;
   siginfo_t sinfo;
   struct winsize ws;
+  bool isOldFirmware = false;
+  
 
   opterr = 0;
-  while ((op = getopt(argc, argv, "t:s:B:a:l:v:V:c:C:T:i:N:n:f:oq")) != -1) {
+  while ((op = getopt(argc, argv, "Ot:s:B:a:l:v:V:c:C:T:i:N:n:f:oq")) != -1) {
     switch(op) {
+	case 'O': isOldFirmware = true; break;
     case 't': ltype = Link::SERIAL; link = optarg; break;
     case 's': ltype = Link::SOCKET; link = optarg; break;
     case 'B': lconf = optarg; break;
@@ -361,6 +365,7 @@ int main(int argc, char *argv[])
   sigaction(SIGINT, &sigact, NULL);
   sigaction(SIGQUIT, &sigact, NULL);
 
+  kp184.setCRCLSBfirst(!isOldFirmware); // new 2020 FW and above have swapped CRC
   rc = kp184.open(ltype, link, lconf);
   if (rc)
     return rc;
