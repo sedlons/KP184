@@ -198,7 +198,6 @@ protected:
     if (ret < 0)
       return ret;
     if ((size_t)ret == len) {
-      usleep(m_recvdelay);
       if ((ret = recv(rbuf, size)) >= 0) {
 #ifdef MBDEBUG
         if (m_debug)

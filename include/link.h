@@ -252,8 +252,8 @@ public:
       goto serfail;
     }
 
-    // default config
-    sattr.c_cflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+    // default config - sets the terminal to something like "raw" mode
+    cfmakeraw(&sattr);
     // set to 8-bits, no parity, 1 stop bit
     sattr.c_cflag &= ~(PARENB | CSTOPB | CRTSCTS);
     sattr.c_cflag &= ~CSIZE;
@@ -470,25 +470,36 @@ serfail:
     if (m_fd < 0)
       return -ENXIO;
 
+    int rlen = 0;
+
+    // because we don't know datalen of received data, 
+    // just read until timeout occur
     memcpy(&timeout, &m_timeout_recv, sizeof(timeout));
     do {
       FD_ZERO (&read_fd);
       FD_SET (m_fd, &read_fd);
 
-      if ((rc = select (m_fd + 1, &read_fd, NULL, NULL, &timeout)) < 0) {
+      rc = select(m_fd + 1, &read_fd, NULL, NULL, &timeout);
+      if (rc < 0) {
         if (errno == EINTR)
           continue;
         rc = -errno;
         perror ("select");
         return rc;
       } else if (rc == 0) { // timeout
-        rc = -ETIMEDOUT;
+          return (rlen > 0) ? rlen : -ETIMEDOUT;
       } else { // we have only one descriptor
-        rc = read(m_fd, buf, size);
-        if (rc < 0)
+        rc = read(m_fd, buf+rlen, size-rlen);
+
+        if(rc > 0) {
+          rlen += rc;
+		}
+
+        if (rc < 0) {
           return -errno;
+        }
       }
-    }  while(0);
+    }  while(1);
 
     return rc;
   }
