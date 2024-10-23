@@ -176,7 +176,7 @@ void usage(const char prog[])
   printf(" -l: load mode and value: val[m]<A|R|W>\n");
   printf(" -v: voltage threshold, V\n");
   printf(" -V: voltage threshold to set half load, V\n");
-  printf(" -c: cuurent low threshold, A\n");
+  printf(" -c: current low threshold, A\n");
   printf(" -C: current high threshold, load is immediately off, A\n");
   printf(" -T: maximum load time, h:m:s\n");
   printf(" -i: sample interval, s [%g s]\n",
@@ -187,6 +187,8 @@ void usage(const char prog[])
   printf(" -o: do not append CSV file\n");
   printf(" -q: produce no additional information\n");
 }
+
+#define SIGTIMEEND (SIGRTMIN+1)
 
 int main(int argc, char *argv[])
 {
@@ -206,8 +208,8 @@ int main(int argc, char *argv[])
   struct itimerspec tsint, tsend = {};
   sigset_t timset;
   timer_t tintid = 0, tendid = 0;
+  struct sigevent sevEnd;
   static struct sigaction sigact;
-  siginfo_t sinfo;
   struct winsize ws;
   bool isOldFirmware = false;
   
@@ -376,6 +378,7 @@ int main(int argc, char *argv[])
 
   sigemptyset(&timset);
   sigaddset(&timset, SIGALRM);
+  sigaddset(&timset, SIGTIMEEND);
   sigprocmask(SIG_BLOCK, &timset, NULL);
   rc = timer_create(CLOCK_MONOTONIC, NULL, &tintid);
   if (rc == EAGAIN)
@@ -386,9 +389,12 @@ int main(int argc, char *argv[])
   }
 
   if (ts_cmp(tsend.it_value, { 0, 0 }) > 0) {
-    rc = timer_create(CLOCK_MONOTONIC, NULL, &tendid);
+    memset(&sevEnd, 0x00, sizeof(sevEnd));
+    sevEnd.sigev_notify = SIGEV_SIGNAL;
+    sevEnd.sigev_signo = SIGTIMEEND;
+    rc = timer_create(CLOCK_MONOTONIC, &sevEnd, &tendid);
     if (rc == EAGAIN)
-      rc = timer_create(CLOCK_MONOTONIC, NULL, &tendid);
+      rc = timer_create(CLOCK_MONOTONIC, &sevEnd, &tendid);
     if (rc) {
       perror("ERR Can't create termination timer");
       goto close;
@@ -526,11 +532,11 @@ int main(int argc, char *argv[])
 
     // wait for timers
     while (term == TERM_NONE) {
-      int sret = sigwaitinfo(&timset, &sinfo);
-      if ((sret != SIGALRM) || (sinfo.si_value.sival_ptr == 0))
-        continue;
-      if ((timer_t)sinfo.si_value.sival_ptr != tintid)
+      int sret = sigwaitinfo(&timset, NULL);
+      if (sret == SIGTIMEEND)
         term = TERM_TIME;
+      if (sret != SIGALRM)
+        continue;
       break;
     }
 
